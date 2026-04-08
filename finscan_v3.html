@@ -425,6 +425,30 @@ tr:hover td{background:rgba(37,99,235,.025);}
 .btn-export:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(37,99,235,.45);}
 
 /* ═══════════════════════════════════════
+   TOOLTIP
+═══════════════════════════════════════ */
+.has-tip{position:relative;cursor:help;}
+.has-tip::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 8px);left:50%;
+  transform:translateX(-50%);
+  background:#0f172a;color:#f1f5f9;
+  font-size:12px;line-height:1.6;font-weight:400;
+  padding:10px 14px;border-radius:10px;
+  width:260px;white-space:normal;text-align:left;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:100;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+}
+.has-tip::before{
+  content:'';position:absolute;bottom:calc(100% + 2px);left:50%;
+  transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:#0f172a;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;
+}
+.has-tip:hover::after,.has-tip:hover::before{opacity:1;}
+
+/* ═══════════════════════════════════════
    SECTION LABEL
 ═══════════════════════════════════════ */
 .section-lbl{
@@ -500,7 +524,7 @@ tr:hover td{background:rgba(37,99,235,.025);}
     <div class="stat-card c-red"><div class="stat-label">Anomaly พบ</div><div class="stat-value" id="s-anom">—</div><div class="stat-sub" id="s-apct">—</div></div>
     <div class="stat-card c-amber"><div class="stat-label">ยอด Anomaly</div><div class="stat-value" id="s-aamt">—</div><div class="stat-sub" id="s-aamt2">—</div></div>
     <div class="stat-card c-green"><div class="stat-label">เฉลี่ย / ครั้ง</div><div class="stat-value" id="s-avg">—</div><div class="stat-sub">บาท</div></div>
-    <div class="stat-card c-purple"><div class="stat-label">IQR Cutoff</div><div class="stat-value" id="s-iqr">—</div><div class="stat-sub">เกณฑ์ผิดปกติ</div></div>
+    <div class="stat-card c-purple"><div class="stat-label">IQR Cutoff</div><div class="stat-value" id="s-iqr">—</div><div class="stat-sub has-tip" data-tip="คำนวณจาก Q3 + 2.5×IQR — รายจ่ายที่เกินกว่านี้ถือว่าสูงผิดปกติสำหรับคุณ">เกณฑ์รายจ่ายปกติ ⓘ</div></div>
   </div>
 
   <!-- TABS -->
@@ -522,6 +546,12 @@ tr:hover td{background:rgba(37,99,235,.025);}
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title"><span class="dot dot-red"></span>รายการ Anomaly <span id="anom-count" style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.2);margin-left:4px;font-family:ui-monospace,monospace;"></span></div>
       <div class="tbl-wrap"><table><thead><tr><th>วันที่</th><th>รายละเอียด</th><th>หมวด</th><th>จำนวนเงิน</th><th>IF Score</th><th>เหตุผล</th><th>สถานะ</th></tr></thead><tbody id="t-anom"></tbody></table></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 20px;font-size:12px;color:var(--text3)">
+      <span>สถานะ:</span>
+      <span class="has-tip" data-tip="รายการที่ยอดสูงกว่าปกติมาก หรือรูปแบบแตกต่างจากนิสัยการใช้จ่าย"><span class="badge badge-a">ANOMALY</span> = ผิดปกติ ควรตรวจสอบ</span>
+      <span class="has-tip" data-tip="รายการโอนในครอบครัว Jumpatip หรือรายจ่ายที่สมยอม — ระบบรู้แล้วว่าไม่ผิดปกติ"><span class="badge badge-w">ข้ามได้</span> = ครอบครัว/สมยอม</span>
+      <span class="has-tip" data-tip="รายการปกติที่ยอดและรูปแบบอยู่ในช่วงปกติของคุณ"><span class="badge badge-n">normal</span> = ปกติ</span>
     </div>
     <div id="insight-panel"></div>
   </div>
@@ -572,12 +602,12 @@ tr:hover td{background:rgba(37,99,235,.025);}
 
     <div class="grid-eq" style="margin-bottom:20px;">
       <div class="algo-block">
-        <h4>🌲 Isolation Forest Pipeline</h4>
-        <div class="algo-step"><div class="algo-num">1</div><div class="algo-text"><strong>Feature Engineering</strong> — สร้าง features จาก amount, rolling stats, วัน/เดือน และ TF-IDF text</div></div>
-        <div class="algo-step"><div class="algo-num">2</div><div class="algo-text"><strong>Normalise</strong> — Min-Max scaling ทุก feature ก่อนส่งเข้า model</div></div>
-        <div class="algo-step"><div class="algo-num">3</div><div class="algo-text"><strong>Isolation Forest</strong> — 100 trees สร้าง random partitions, transaction ที่ isolate ได้เร็ว = anomaly</div></div>
-        <div class="algo-step"><div class="algo-num">4</div><div class="algo-text"><strong>IQR Filter</strong> — Q3 + 2.5×IQR กรอง false positive เพิ่มเติม</div></div>
-        <div class="algo-step"><div class="algo-num">5</div><div class="algo-text"><strong>Whitelist</strong> — ข้าม transaction ครอบครัว Jumpatip โดยอัตโนมัติ</div></div>
+        <h4>🌲 วิธีที่ Model ตัดสินใจ</h4>
+        <div class="algo-step"><div class="algo-num">1</div><div class="algo-text"><strong>ดูพฤติกรรมปกติของคุณก่อน</strong> — model คำนวณค่าเฉลี่ยรายจ่าย 7 วันย้อนหลัง เพื่อรู้ว่าปกติคุณใช้เงินเท่าไหร่ต่อครั้ง</div></div>
+        <div class="algo-step"><div class="algo-num">2</div><div class="algo-text"><strong>หาเกณฑ์ปกติด้วย IQR</strong> — คำนวณ "กรอบ" รายจ่ายปกติ ถ้าครั้งไหนสูงกว่ากรอบนี้มาก ถือว่าผิดปกติ (เหมือน box plot ใน statistics)</div></div>
+        <div class="algo-step"><div class="algo-num">3</div><div class="algo-text"><strong>Isolation Forest ตรวจรูปแบบ</strong> — ไม่ได้ดูแค่ยอดเงิน แต่ดูด้วยว่าเกิดวันไหน เวลาไหน บ่อยแค่ไหน รายการที่ "แปลกจากนิสัย" จะถูก isolate ออกมาเร็วกว่า</div></div>
+        <div class="algo-step"><div class="algo-num">4</div><div class="algo-text"><strong>รวมสองวิธีเพื่อความแม่น</strong> — flag เฉพาะรายการที่ผิดปกติทั้งด้านยอดเงิน (IQR) และรูปแบบ (IF) ลด false alarm</div></div>
+        <div class="algo-step"><div class="algo-num">5</div><div class="algo-text"><strong>Whitelist อัตโนมัติ</strong> — รายการโอนในครอบครัวและรายจ่ายที่รู้อยู่แล้วว่าสมยอม จะไม่ถูก flag เพื่อลด noise</div></div>
       </div>
 
       <div class="algo-block">
@@ -776,7 +806,15 @@ function processData(rows){
       const iqrA=!isFamily&&r.amount>iqrCut&&scores[i]>0.52;
       return{...r,score:scores[i],rolling_mean:rm[i],z_score:zs[i],
         is_anomaly:ifA||iqrA,is_family:isFamily,
-        reason:isFamily?'ครอบครัว ✓':(ifA&&iqrA)?'ยอดสูง + IF outlier':iqrA?'ยอดสูงกว่า IQR':ifA?'IF outlier':''};
+        reason:isFamily?'ครอบครัว ✓'
+        :(ifA&&iqrA)?'ยอดสูงผิดปกติมาก'
+        :iqrA?'จ่ายมากกว่าปกติมาก'
+        :ifA?'รูปแบบแปลกจากนิสัย':'',
+      reason_detail:isFamily?'รายการนี้เป็นการโอนในครอบครัว ไม่ถือว่าผิดปกติ'
+        :(ifA&&iqrA)?`ยอด ฿${Math.round(r.amount).toLocaleString()} สูงกว่าเกณฑ์ IQR (฿${Math.round(iqrCut).toLocaleString()}) และ Isolation Forest ก็ตรวจพบว่ารูปแบบการใช้จ่ายครั้งนี้แตกต่างจากนิสัยปกติอย่างชัดเจน`
+        :iqrA?`ยอด ฿${Math.round(r.amount).toLocaleString()} สูงกว่าเกณฑ์ปกติ (฿${Math.round(iqrCut).toLocaleString()}) ซึ่งคำนวณจาก IQR — ค่าที่ห่างไกลจากช่วงรายจ่ายปกติของคุณ`
+        :ifA?`Isolation Forest พบว่ารายการนี้มีรูปแบบแตกต่างจากนิสัยการใช้จ่ายปกติ แม้ยอดอาจไม่สูงมาก แต่เกิดในเวลา/สถานการณ์ที่ผิดปกติ`
+        :''};
     });
 
     document.getElementById('loading').style.display='none';
@@ -858,7 +896,7 @@ function renderOverview(){
     <td><span class="cat-tag">${r.cat}</span></td>
     <td class="amt-red mono">฿${r.amount.toLocaleString('th-TH',{maximumFractionDigits:0})}</td>
     <td><div class="score-wrap"><div class="score-track"><div class="score-fill" style="width:${Math.round(r.score*100)}%;background:var(--red)"></div></div><span class="score-label">${Math.round(r.score*100)}%</span></div></td>
-    <td style="font-size:12px;color:var(--red)">${r.reason}</td>
+    <td><span class="has-tip" style="font-size:12px;color:var(--red);font-weight:500" data-tip="${r.reason_detail}">${r.reason} ⓘ</span></td>
     <td><span class="badge badge-a">ANOMALY</span></td>
   </tr>`).join('');
 
