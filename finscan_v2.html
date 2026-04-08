@@ -414,7 +414,9 @@ function processData(rows){
 
   let df=rows.map(r=>{
     const amt=parseFloat((r[cm.txn]||'0').toString().replace(/,/g,''));
-    const d=new Date(r[cm.date]||'');
+    const _ds=(r[cm.date]||'').trim();
+    const _dp=_ds.split('/');
+    const d=_dp.length===3?new Date(+_dp[2],+_dp[1]-1,+_dp[0]):new Date(_ds);
     return{date:isNaN(d)?null:d,type:r[cm.type]||'',amount_raw:amt,
            note:r[cm.note]||'',memo:r[cm.memo]||'',category_raw:r[cm.cat]||''};
   }).filter(r=>r.date&&r.amount_raw<0&&['Payment','Transfer Withdraw'].includes(r.type));
