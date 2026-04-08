@@ -312,14 +312,20 @@ let charts = {};
 
 const CAT_COLORS = ['#2563eb','#0ea5e9','#6366f1','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#f97316','#84cc16'];
 const ADVICE = {
-  'Shopping':    {tip:'รายจ่าย Shopping มักเป็น impulse buy',action:'ลอง waiting 24 ชม. ก่อนซื้อของราคา > ฿1,000'},
-  'Food':        {tip:'อาหารนอกบ้านบ่อยและยอดสูง',action:'ทำอาหารกินเองสัปดาห์ละ 2–3 วัน ประหยัดได้ 20–30%'},
-  'Transfer':    {tip:'โอนเงินก้อนใหญ่บ่อย',action:'ตั้งงบโอนเงินรายเดือน หรือใช้ standing transfer'},
-  'Transport':   {tip:'ค่าเดินทางสูงกว่าปกติ',action:'ใช้ BTS/MRT แทน Grab ในชั่วโมงเร่งด่วน ประหยัด 60%'},
-  'Coffee':      {tip:'ค่ากาแฟสะสมสูง',action:'ชงกาแฟเองแล้วเอา thermos ไป ประหยัด ฿1,500–2,000/เดือน'},
-  'Subscription':{tip:'ค่า subscription ผิดปกติ',action:'ตรวจสอบ subscription ที่ไม่ได้ใช้แล้ว cancel ออก'},
-  'Grocery':     {tip:'จ่ายซุปเปอร์มาร์เก็ตก้อนใหญ่',action:'วางแผนซื้อรายสัปดาห์แทนรายวัน ลดได้ 15%'},
-  'อื่นๆ':       {tip:'รายจ่ายไม่ระบุหมวดหมู่',action:'เพิ่ม memo ในทุกรายการเพื่อให้ tracking แม่นขึ้น'},
+  'อาหาร':         {tip:'รายจ่ายอาหารนอกบ้านสูงกว่าปกติ',action:'ลองทำอาหารกินเองสัปดาห์ละ 2–3 วัน ประหยัดได้ 20–30%'},
+  'เดินทาง รถ':    {tip:'ค่าเดินทางสูงกว่าปกติ',action:'ใช้ BTS/MRT แทน Grab ในชั่วโมงเร่งด่วน ประหยัดได้ 60%'},
+  'เดินทาง':       {tip:'ค่าเดินทางสูงกว่าปกติ',action:'ใช้ BTS/MRT แทน Grab ในชั่วโมงเร่งด่วน ประหยัดได้ 60%'},
+  'จ่ายบิล':       {tip:'ค่าบิลก้อนใหญ่ผิดปกติ',action:'ตรวจสอบว่าบิลซ้ำหรือถูกเรียกเก็บผิดพลาดไหม'},
+  'เลิฟเว่อ':      {tip:'รายจ่ายหมวดนี้สูงกว่าเดือนอื่น',action:'ตั้งงบรายเดือนสำหรับหมวดนี้ให้ชัดเจน'},
+  'trade':          {tip:'รายจ่าย trade ก้อนใหญ่',action:'ตรวจสอบว่าเป็นไปตามแผนการลงทุนที่วางไว้'},
+  'การเรียนรู้':   {tip:'ค่าเรียนหรือคอร์สสูงกว่าปกติ',action:'เช็ก refund policy ก่อนลงทะเบียนคอร์สราคาแพง'},
+  'ให้ยืม':        {tip:'โอนเงินให้คนอื่นบ่อยและก้อนใหญ่',action:'บันทึก IOU ไว้เสมอ และตั้งวันคืนให้ชัดเจน'},
+  'ค่ายา หาหมอ':  {tip:'ค่ารักษาพยาบาลสูงกว่าปกติ',action:'ตรวจสอบสิทธิ์ประกันสุขภาพหรือบัตรทองที่มีอยู่'},
+  'ค่าห้อง':       {tip:'ค่าเช่าห้องผิดปกติ',action:'ตรวจสอบว่าถูกเรียกเก็บซ้ำหรือมีค่าใช้จ่ายแอบแฝงไหม'},
+  'ช้อปปิ้ง':      {tip:'รายจ่าย Shopping มักเป็น impulse buy',action:'ลอง waiting 24 ชม. ก่อนซื้อของราคา > ฿1,000'},
+  'ของใช้':        {tip:'ค่าของใช้สูงกว่าปกติ',action:'ซื้อของใช้เป็น bulk ราคาถูกกว่าซื้อทีละชิ้น'},
+  'subscription':  {tip:'ค่า subscription ผิดปกติ',action:'ตรวจสอบ subscription ที่ไม่ได้ใช้แล้ว cancel ออก'},
+  'อื่นๆ':         {tip:'รายจ่ายไม่ระบุหมวดหมู่',action:'เพิ่ม memo ในทุกรายการเพื่อให้ tracking แม่นขึ้น'},
 };
 
 // ════════════════════════════════════════════
@@ -334,16 +340,18 @@ dz.addEventListener('drop', e=>{e.preventDefault();handleFile(e.dataTransfer.fil
 // CATEGORIZE
 // ════════════════════════════════════════════
 function categorize(note,memo,cat){
+  // ใช้ category จากธนาคารก่อนเลย (KBank ใส่มาให้แล้ว)
+  const bankCat = (cat||'').trim();
+  if(bankCat && bankCat !== 'อื่นๆ' && bankCat !== '') return bankCat;
+  // fallback keyword matching
   const t=(note+' '+memo).toLowerCase();
-  if(/grab|bolt|taxi|mrt|bts|รถ|วิน/.test(t)) return 'Transport';
-  if(/7-11|seven|lotus|bigc|tops|makro|เซเว่น/.test(t)) return 'Grocery';
-  if(/café|cafe|coffee|starbucks|ชา|กาแฟ/.test(t)) return 'Coffee';
-  if(/ร้าน|restaurant|food|ข้าว|ก๋วยเตี๋ยว|อาหาร|sushi|yayoi|fuji|mk|kichi|shabushi|suki/.test(t)) return 'Food';
-  if(/warrix|uniqlo|zara|h&m|fashion|shirt|shop|ช้อปปิ้ง|สยาม|nike|adidas|apple|samsung|dyson|jbl|ipad/.test(t)) return 'Shopping';
-  if(/โอน|transfer|natnapa|jumpatip|promptpay/.test(t)) return 'Transfer';
-  if(/netflix|spotify|youtube|game|steam/.test(t)) return 'Subscription';
-  if(/concert|cinema|sf|major|บันเทิง/.test(t)) return 'Entertainment';
-  if(cat && cat!=='อื่นๆ' && cat.trim()) return cat.trim();
+  if(/grab|bolt|taxi|mrt|bts|รถ|วิน/.test(t)) return 'เดินทาง';
+  if(/7-11|seven|lotus|bigc|tops|makro|เซเว่น/.test(t)) return 'ซุปเปอร์มาร์เก็ต';
+  if(/café|cafe|coffee|starbucks|ชา|กาแฟ/.test(t)) return 'กาแฟ';
+  if(/ร้าน|restaurant|food|ข้าว|ก๋วยเตี๋ยว|อาหาร|sushi|yayoi|fuji|mk|kichi|shabushi|suki/.test(t)) return 'อาหาร';
+  if(/warrix|uniqlo|zara|h&m|fashion|shirt|shop|ช้อปปิ้ง|nike|adidas|apple|samsung|dyson/.test(t)) return 'ช้อปปิ้ง';
+  if(/netflix|spotify|youtube|game|steam/.test(t)) return 'subscription';
+  if(/concert|cinema|sf|major/.test(t)) return 'บันเทิง';
   return 'อื่นๆ';
 }
 
@@ -409,7 +417,7 @@ function processData(rows){
     const d=new Date(r[cm.date]||'');
     return{date:isNaN(d)?null:d,type:r[cm.type]||'',amount_raw:amt,
            note:r[cm.note]||'',memo:r[cm.memo]||'',category_raw:r[cm.cat]||''};
-  }).filter(r=>r.date&&r.amount_raw<0);
+  }).filter(r=>r.date&&r.amount_raw<0&&['Payment','Transfer Withdraw'].includes(r.type));
 
   if(df.length<10) throw new Error('ข้อมูลน้อยเกินไป');
   df=df.map(r=>({...r,amount:Math.abs(r.amount_raw)}));
