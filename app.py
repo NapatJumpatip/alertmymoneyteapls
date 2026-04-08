@@ -202,7 +202,7 @@ CAT_COLORS = [
 # DATA PIPELINE
 # ══════════════════════════════════════════════════════════════════
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=3)
 def load_and_clean(file_bytes: bytes) -> pd.DataFrame:
     """
     Step 1: Ingest CSV and apply noise filters.
@@ -259,7 +259,7 @@ def load_and_clean(file_bytes: bytes) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=3)
 def categorize_transactions(df: pd.DataFrame) -> pd.DataFrame:
     """
     Step 2: NLP Categorization using TF-IDF features.
@@ -304,7 +304,7 @@ def categorize_transactions(df: pd.DataFrame) -> pd.DataFrame:
 
     # ── TF-IDF feature extraction (for anomaly model) ──────────
     vectorizer = TfidfVectorizer(
-        max_features=50,
+        max_features=30,
         analyzer="char_wb",
         ngram_range=(2, 4),
         min_df=1,
@@ -322,7 +322,7 @@ def categorize_transactions(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=3)
 def detect_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     """
     Step 3: Isolation Forest anomaly detection.
@@ -376,7 +376,7 @@ def detect_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     n_samples = len(df)
     sample_size = min(64, n_samples)
     clf = IsolationForest(
-        n_estimators=100,
+        n_estimators=50,
         contamination=0.05,
         random_state=42,
     )
@@ -751,19 +751,18 @@ def main():
         return
 
     # ── Pipeline ───────────────────────────────────────────────────
-    with st.spinner("🔄 กำลังประมวลผล..."):
-        file_bytes = uploaded.read()
+    file_bytes = uploaded.read()
 
-        # Step 1: Clean
+    with st.spinner("📥 Step 1/3 — กำลังโหลดและ clean ข้อมูล..."):
         df_clean = load_and_clean(file_bytes)
-        if df_clean.empty:
-            st.error("❌ ไม่พบรายการจ่ายเงินในไฟล์นี้ กรุณาตรวจสอบ format")
-            return
+    if df_clean.empty:
+        st.error("❌ ไม่พบรายการจ่ายเงินในไฟล์นี้ กรุณาตรวจสอบ format")
+        return
 
-        # Step 2: NLP Categorize
+    with st.spinner("🔤 Step 2/3 — NLP Categorization (TF-IDF)..."):
         df_cat = categorize_transactions(df_clean)
 
-        # Step 3: Anomaly Detection
+    with st.spinner("🌲 Step 3/3 — Isolation Forest Anomaly Detection..."):
         df_final, iqr_cutoff = detect_anomalies(df_cat)
 
     # ── KPI Metrics ────────────────────────────────────────────────
